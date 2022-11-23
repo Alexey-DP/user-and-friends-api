@@ -1,0 +1,5 @@
+export enum CONSTANTS {
+    USERS_COUNT_FOR_SEED = 200,
+    FOLLOWINGS_LIMIT = 150,
+    TOP_LIMIT = 5
+}

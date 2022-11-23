@@ -1,0 +1,37 @@
+{
+   "name": "test-rest-app-users-and-friends",
+   "version": "1.0.0",
+   "description": "mini test rest api",
+   "main": "app.js",
+   "author": "Oleksii Pochtovyk",
+   "license": "ISC",
+   "scripts": {
+      "start": "ts-node-dev --respawn --transpile-only --exit-child src/app.ts",
+      "build": "tsc -p .",
+      "typeorm": "typeorm-ts-node-commonjs -d src/utils/data-source.ts",
+      "migrate:create": "npm run typeorm migration:generate src/migrations/new-entity",
+      "migrate:run": "npm run typeorm migration:run",
+      "seed": "ts-node ./node_modules/typeorm-extension/dist/cli/index.js seed -d src/utils/data-source.ts"
+   },
+   "dependencies": {
+      "class-transformer": "^0.5.1",
+      "class-validator": "^0.13.2",
+      "config": "^3.3.8",
+      "dotenv": "^16.0.3",
+      "envalid": "^7.3.1",
+      "express": "^4.17.2",
+      "pg": "^8.4.0",
+      "reflect-metadata": "^0.1.13",
+      "typeorm": "0.3.10",
+      "typeorm-extension": "^2.2.13",
+      "zod": "^3.19.1"
+   },
+   "devDependencies": {
+      "@types/config": "^3.3.0",
+      "@types/express": "^4.17.14",
+      "@types/node": "^16.11.10",
+      "ts-node": "10.7.0",
+      "ts-node-dev": "^2.0.0",
+      "typescript": "4.5.2"
+   }
+}
