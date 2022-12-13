@@ -3,7 +3,7 @@ import {
     getTopUsersWithMostFollowingsHandler,
     getUserByIdWithFriendsHandler,
     getUsersWithFollowingsHandler,
-    getUsersWithoutFollowingsHandler,
+    getUsersWithoutFollowingsHandler
 } from '../controller/user-controller';
 
 const router = express.Router();
@@ -13,6 +13,5 @@ router
     .get('/:user_id/friends', getUserByIdWithFriendsHandler)
     .get('/max-following', getTopUsersWithMostFollowingsHandler)
     .get('/not-following', getUsersWithoutFollowingsHandler)
-
 
 export default router;

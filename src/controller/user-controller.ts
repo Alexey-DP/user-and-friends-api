@@ -4,11 +4,13 @@ import { NextFunction, Request, Response } from 'express';
 import {
     findAndCountUsersWithFollowings,
     findUsersWithoutFollowings,
-    getUserByIdAndSort,
+    getTopUsersWithMostFollowings,
+    getUserById,
     getUsersFriends
 } from '../services/user.service';
 import AppError from '../utils/app-error';
 import { CONSTANTS } from '../enum/constants.enum';
+import { User } from '../entities/User.entity';
 
 export const getUsersWithFollowingsHandler = async (
     req: Request,
@@ -31,32 +33,29 @@ export const getUserByIdWithFriendsHandler = async (
     next: NextFunction
 ) => {
     try {
-        const errorsByValidate = await validate(new QueryDto(req?.query?.order_by, req.query?.order_type))
-        if (errorsByValidate.length > 0) return res.json(errorsByValidate);
+        const errorsByValidate = await validate(
+            new QueryDto(req?.query?.order_by, req.query?.order_type))
+        if (errorsByValidate.length > 0) return res.status(400).json(errorsByValidate);
 
         const { order_by } = req.query || 'id';
         const { order_type } = req.query || 'desc';
         const userId = req.params.user_id;
 
-        const userNeedFriends = await getUserByIdAndSort(userId, { order_by, order_type })
+        const currentUser = await getUserById(userId)
 
-        if (!userNeedFriends) {
+        if (!currentUser) {
             return next(new AppError(404, 'User with that ID not found'));
         }
 
-        const userFollowers = await getUsersFriends(userId);
+        let friends: User[] = [];
 
-        if (userFollowers.length === 0
-            || userNeedFriends.following.length === 0)
-            return res.status(200).json({ ...userNeedFriends, friends: [] })
+        if (currentUser.following.length <= 0) {
+            res.status(200).json({ ...currentUser, friends })
+        }
 
-        const userFollowersIds = userFollowers.reduce((prev: string[], curr) => {
-            return [...prev, curr.id]
-        }, [])
-        const friends = userNeedFriends.following.
-            filter(userFollowing => userFollowersIds.includes(userFollowing.id));
+        friends = await getUsersFriends(userId, { order_by, order_type })
 
-        res.status(200).json({ ...userNeedFriends, friends })
+        res.status(200).json({ ...currentUser, friends })
 
     } catch (err: any) {
         next(err);
@@ -68,11 +67,7 @@ export const getTopUsersWithMostFollowingsHandler = async (
     res: Response,
     next: NextFunction) => {
     try {
-        const { users } = await findAndCountUsersWithFollowings()
-        const topUsers =
-            users.sort((a, b) => b.following.length - a.following.length)
-                .slice(0, CONSTANTS.TOP_LIMIT)
-
+        const topUsers = await getTopUsersWithMostFollowings(CONSTANTS.TOP_LIMIT);
         res.status(200).json(topUsers);
     } catch (err: any) {
         next(err);
@@ -88,7 +83,6 @@ export const getUsersWithoutFollowingsHandler = async (
         const usersWithoutFollowings = await findUsersWithoutFollowings();
 
         res.status(200).json(usersWithoutFollowings);
-
     } catch (err: any) {
         next(err);
     }

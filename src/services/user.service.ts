@@ -1,23 +1,33 @@
 import { QueryDto } from '../dto/params.dto';
 import { User } from '../entities/User.entity';
-import { UserGender } from '../enum/user-gender.enum';
 import { AppDataSource } from '../utils/data-source';
 
 const userRepository = AppDataSource.getRepository(User);
 
-export const getUserByIdAndSort = async (id: string, orderParams: QueryDto) => {
+export const getUserById = async (id: string) => {
     return await userRepository.findOne(
         {
             where: { id },
             relations: { following: true },
-            order: {
-                following: { [orderParams.order_by as string]: orderParams.order_type }
-            }
         });
 }
 
-export const getUsersFriends = async (id: string) => {
-    return await userRepository.find({ where: { following: { id } } })
+export const getUsersFriends = async (id: string, orderParams: QueryDto) => {
+    return await userRepository.createQueryBuilder('users')
+        .where(`users.id IN (
+                SELECT "usersId_1"
+                FROM users_following_users
+                WHERE "usersId_1" IN
+                (
+                SELECT "usersId_2"
+                FROM users_following_users
+                WHERE "usersId_1"=:id
+                ) AND "usersId_2"=:id
+        )`, { id })
+        .orderBy(
+            orderParams.order_by as string,
+            orderParams.order_type?.toUpperCase() as 'ASC' | 'DESC' | undefined)
+        .getMany();
 }
 
 export const findAndCountUsersWithFollowings = async () => {
@@ -32,8 +42,20 @@ export const findAndCountUsersWithFollowings = async () => {
     return { users, users_count };
 }
 
-export const findUsersWithoutFollowings = async () => {
-    const users = await userRepository.find({ relations: { following: true } })
+export const getTopUsersWithMostFollowings = async (limit: number) => {
+    return await userRepository.createQueryBuilder('user')
+        .select(['id', 'first_name', 'gender'])
+        .addSelect('COUNT(users_following.usersId_2)', 'count_followings')
+        .innerJoin('users_following_users', 'users_following', 'user.id=users_following.usersId_1')
+        .groupBy('user.id')
+        .orderBy('count_followings', 'DESC')
+        .limit(limit)
+        .getRawMany();
+}
 
-    return users.filter(user => user.following.length === 0);
+export const findUsersWithoutFollowings = async () => {
+    return await userRepository.createQueryBuilder('users')
+        .where(`users.id NOT IN (SELECT DISTINCT "usersId_1"
+                FROM users_following_users)`)
+        .getMany();
 }
